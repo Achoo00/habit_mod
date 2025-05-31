@@ -2,6 +2,8 @@
 package net.amaha.habitmod;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.amaha.habitmod.data.AuraManager;
+import net.amaha.habitmod.effect.PlayerEffectManager;
 import net.amaha.habitmod.gui.ChronicleScreen;
 import net.amaha.habitmod.network.PacketHandler;
 import net.minecraft.client.KeyMapping;
@@ -29,6 +31,18 @@ public class HabitMod {
         modEventBus.addListener(this::registerKeyMappings);
         modEventBus.addListener(this::commonSetup); // <--- NEW: Register common setup
         MinecraftForge.EVENT_BUS.addListener(HabitMod::onClientTick);
+
+        // Register the PlayerEffectManager with Forge's event bus
+        // The @Mod.EventBusSubscriber annotation on PlayerEffectManager also registers its static event handlers
+
+        // Set initial aura level for testing (0-50 for Tier 0)
+        AuraManager.setAuraLevel(25); // This will put the player in Tier 0 (Incapable Builder)
+
+        // For testing higher tiers, uncomment one of these:
+        // AuraManager.setAuraLevel(100); // Tier 1
+        // AuraManager.setAuraLevel(200); // Tier 2
+        // AuraManager.setAuraLevel(400); // Tier 3
+        // AuraManager.setAuraLevel(600); // Tier 4
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

@@ -17,7 +17,7 @@ Core "Productivity Aura" System
 Tiered Abilities & Progression Gating
 
     Tier 0 (Aura 0-50): Incapable Builder:
-        Severely restricted: limited health/movement, debuffs (weakness, hunger, slowness).
+        Severely restricted: half health, debuffs (weakness, hunger, slowness).
         Cannot mine most blocks effectively; 2x2 crafting only.
         Extremely limited inventory.
     Tier 1 (Aura 51-150): Awakened Apprentice:
