@@ -1,5 +1,5 @@
-// src/main/java/net/amaha/learnmod/data/Task.java
-package net.amaha.learnmod.data;
+// src/main/java/net/amaha/habitmod/data/Task.java
+package net.amaha.habitmod.data;
 
 public class Task {
     private String name;

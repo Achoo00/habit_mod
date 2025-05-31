@@ -1,9 +1,11 @@
-// src/main/java/net/amaha/learnmod/gui/ChronicleScreen.java
-package net.amaha.learnmod.gui;
+// src/main/java/net/amaha/habitmod/gui/ChronicleScreen.java
+package net.amaha.habitmod.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.amaha.learnmod.LearnMod; // Import your minimal main mod class
-import net.amaha.learnmod.data.Task; // Import the Task data class
+import net.amaha.habitmod.HabitMod; // Import your minimal main mod class
+import net.amaha.habitmod.data.Task; // Import the Task data class
+import net.amaha.habitmod.network.PacketHandler;
+import net.amaha.habitmod.network.ApplyEffectPacket;
 import net.minecraft.client.Minecraft; // Import Minecraft client for player access
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -24,7 +26,7 @@ import java.util.List;
 @OnlyIn(Dist.CLIENT)
 public class ChronicleScreen extends Screen {
     // A simple placeholder texture. For a real mod, you'd create your own.
-    private static final ResourceLocation BACKGROUND_TEXTURE = new ResourceLocation(LearnMod.MOD_ID, "textures/gui/chronicle_background.png");
+    private static final ResourceLocation BACKGROUND_TEXTURE = new ResourceLocation(HabitMod.MOD_ID, "textures/gui/chronicle_background.png");
 
     private EditBox taskInputField;
     private Button addTaskButton;
@@ -37,7 +39,7 @@ public class ChronicleScreen extends Screen {
     private int guiTop;
 
     public ChronicleScreen() {
-        super(Component.translatable("gui.learnmod.chronicle.title"));
+        super(Component.translatable("gui.habitmod.chronicle.title"));
         // Initialize with some default tasks
         tasks.add(new Task("Workout", false));
         tasks.add(new Task("Read a book", false));
@@ -98,11 +100,12 @@ public class ChronicleScreen extends Screen {
 
                         // --- Specific logic for "Workout" task ---
                         if (task.getName().equalsIgnoreCase("Workout")) {
+                            System.out.println("Workout task checked! Attempting to apply speed boost.");
                             Player player = Minecraft.getInstance().player; // Correct way to get the player on client
                             if (player != null) {
-                                // Apply speed boost (10% faster for 30 seconds)
-                                // Amplifier 0 is +10%, Amplifier 1 is +20%, etc.
-                                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 600, 0, false, false));
+                                // Send packet to server to apply effect instead of applying directly on client
+                                // This ensures proper synchronization and allows effects to be removed by milk
+                                PacketHandler.sendToServer(new ApplyEffectPacket(MobEffects.JUMP, 60, 4, false, false));
                                 player.sendSystemMessage(Component.literal("You feel invigorated from your workout!"));
                             }
                         }
