@@ -31,34 +31,53 @@ public class ChronicleScreen extends Screen {
     private static final ResourceLocation BACKGROUND_TEXTURE = new ResourceLocation(HabitMod.MOD_ID, "textures/gui/chronicle_background.png");
 
     // Page constants
-    private static final int TASKS_PAGE = 0;
-    private static final int TIERS_PAGE = 1;
+    private static final int OVERVIEW_TASKS_PAGE = 0;
+    private static final int HEALTH_AURA_PAGE = 1;
+    private static final int INTELLIGENCE_AURA_PAGE = 2;
+    private static final int SOCIAL_AURA_PAGE = 3;
+    private static final int ORGANIZATION_PRODUCTIVITY_AURA_PAGE = 4;
+    private static final int CREATIVE_HOBBY_AURA_PAGE = 5;
+    private static final int SKILL_TREES_PAGE = 6;
+    private static final int SETTINGS_PAGE = 7;
 
     // Current page being displayed
-    private int currentPage = TASKS_PAGE;
+    private int currentPage = OVERVIEW_TASKS_PAGE;
 
     private EditBox taskInputField;
     private Button addTaskButton;
     private List<Task> tasks = new ArrayList<>(); // Use our Task data class
     private List<Checkbox> taskCheckboxes = new ArrayList<>(); // To manage checkboxes
 
-    // Navigation buttons
-    private Button nextPageButton;
-    private Button prevPageButton;
+    // Navigation buttons for left panel
+    private List<Button> navigationButtons = new ArrayList<>();
+
+    // Top header components
+    private Button confessCheatButton;
 
     // Add aura display
     private net.amaha.habitmod.data.AuraManager auraManager;
 
-    private int xSize = 256;
+    private int xSize = 512;
     private int ySize = 200; // Make GUI slightly taller to fit more tasks
     private int guiLeft;
     private int guiTop;
 
-    // Scrolling variables
+    // Scrolling variables for tasks
     private int scrollOffset = 0; // Current scroll position
     private int maxVisibleTasks = 6; // Maximum number of tasks visible at once
     private Button scrollUpButton;
     private Button scrollDownButton;
+
+    // Scrolling variables for navigation panel
+    private int navScrollOffset = 0; // Current navigation scroll position
+    private int maxVisibleNavButtons = 5; // Maximum number of navigation buttons visible at once
+    private Button navScrollUpButton;
+    private Button navScrollDownButton;
+
+    // Scrolling variables for aura category content
+    private int auraCategoryScrollOffset = 0; // Current aura category content scroll position
+    private Button auraCategoryScrollUpButton;
+    private Button auraCategoryScrollDownButton;
 
     // Task editing variables
     private int editingTaskIndex = -1; // Index of the task being edited, -1 if none
@@ -83,24 +102,170 @@ public class ChronicleScreen extends Screen {
         this.guiLeft = (this.width - this.xSize) / 2;
         this.guiTop = (this.height - this.ySize) / 2;
 
-        // --- Add Navigation Buttons (visible on both pages) ---
-        nextPageButton = Button.builder(Component.literal("Next Page >>"), (button) -> {
-            currentPage = TIERS_PAGE;
-            clearWidgets();
-            init(); // Reinitialize the GUI with the new page
-        }).pos(guiLeft + xSize - 90, guiTop + 10).size(80, 20).build();
+        // --- Add Top Header Components ---
+        // "Confess Cheat" button in top-right corner
+        confessCheatButton = Button.builder(Component.literal("Confess Cheat"), (button) -> {
+            // TODO: Implement anti-abuse consequences as detailed in PRD.md
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("You confessed to cheating! Consequences will follow..."));
+                // For now, just remove some aura points
+                net.amaha.habitmod.data.AuraManager.removeAura(50);
+            }
+        }).pos(guiLeft + xSize - 100, guiTop + 5).size(90, 20).build();
+        this.addRenderableWidget(confessCheatButton);
 
-        prevPageButton = Button.builder(Component.literal("<< Prev Page"), (button) -> {
-            currentPage = TASKS_PAGE;
-            clearWidgets();
-            init(); // Reinitialize the GUI with the new page
-        }).pos(guiLeft + 10, guiTop + 10).size(80, 20).build();
+        // --- Add Left-Side Navigation Panel ---
+        // Clear existing navigation buttons
+        navigationButtons.forEach(this::removeWidget);
+        navigationButtons.clear();
 
-        // Initialize the appropriate page
-        if (currentPage == TASKS_PAGE) {
-            initTasksPage();
-        } else {
-            initTiersPage();
+        // Add navigation buttons for different views
+        int buttonHeight = 20;
+        int buttonSpacing = 5;
+        int navPanelStartY = guiTop + 40;
+        int navPanelHeight = ySize - 50; // Leave space for header and some padding
+        int navButtonsAreaHeight = navPanelHeight - 50; // Leave space for scroll buttons
+
+        // Calculate how many buttons can be visible at once
+        maxVisibleNavButtons = navButtonsAreaHeight / (buttonHeight + buttonSpacing);
+
+        // Add navigation scroll buttons
+        navScrollUpButton = Button.builder(Component.literal("▲"), (button) -> {
+            if (navScrollOffset > 0) {
+                navScrollOffset--;
+                clearWidgets();
+                init();
+            }
+        }).pos(guiLeft + 10, navPanelStartY).size(20, 20).build();
+        this.addRenderableWidget(navScrollUpButton);
+
+        navScrollDownButton = Button.builder(Component.literal("▼"), (button) -> {
+            if (navScrollOffset < navigationButtons.size() - maxVisibleNavButtons) {
+                navScrollOffset++;
+                clearWidgets();
+                init();
+            }
+        }).pos(guiLeft + 10, navPanelStartY + navButtonsAreaHeight + 5).size(20, 20).build();
+        this.addRenderableWidget(navScrollDownButton);
+
+        // Create all navigation buttons (even if not all will be visible)
+        List<Button> allNavButtons = new ArrayList<>();
+
+        // Overview / Tasks button (default)
+        Button overviewButton = Button.builder(Component.literal("Overview / Tasks"), (button) -> {
+            currentPage = OVERVIEW_TASKS_PAGE;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + 35, 0).size(75, buttonHeight).build(); // Y position will be set later
+        allNavButtons.add(overviewButton);
+
+        // Health Aura button
+        Button healthButton = Button.builder(Component.literal("Health Aura"), (button) -> {
+            currentPage = HEALTH_AURA_PAGE;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + 35, 0).size(75, buttonHeight).build(); // Y position will be set later
+        allNavButtons.add(healthButton);
+
+        // Intelligence Aura button
+        Button intelligenceButton = Button.builder(Component.literal("Intelligence Aura"), (button) -> {
+            currentPage = INTELLIGENCE_AURA_PAGE;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + 35, 0).size(75, buttonHeight).build(); // Y position will be set later
+        allNavButtons.add(intelligenceButton);
+
+        // Social Aura button
+        Button socialButton = Button.builder(Component.literal("Social Aura"), (button) -> {
+            currentPage = SOCIAL_AURA_PAGE;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + 35, 0).size(75, buttonHeight).build(); // Y position will be set later
+        allNavButtons.add(socialButton);
+
+        // Organization & Productivity Aura button
+        Button orgProdButton = Button.builder(Component.literal("Org & Prod Aura"), (button) -> {
+            currentPage = ORGANIZATION_PRODUCTIVITY_AURA_PAGE;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + 35, 0).size(75, buttonHeight).build(); // Y position will be set later
+        allNavButtons.add(orgProdButton);
+
+        // Creative & Hobby Aura button
+        Button creativeButton = Button.builder(Component.literal("Creative Aura"), (button) -> {
+            currentPage = CREATIVE_HOBBY_AURA_PAGE;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + 35, 0).size(75, buttonHeight).build(); // Y position will be set later
+        allNavButtons.add(creativeButton);
+
+        // Skill Trees button
+        Button skillTreesButton = Button.builder(Component.literal("Skill Trees"), (button) -> {
+            currentPage = SKILL_TREES_PAGE;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + 35, 0).size(75, buttonHeight).build(); // Y position will be set later
+        allNavButtons.add(skillTreesButton);
+
+        // Settings button
+        Button settingsButton = Button.builder(Component.literal("Settings"), (button) -> {
+            currentPage = SETTINGS_PAGE;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + 35, 0).size(75, buttonHeight).build(); // Y position will be set later
+        allNavButtons.add(settingsButton);
+
+        // Add only the visible buttons to the screen
+        int startIndex = Math.min(navScrollOffset, Math.max(0, allNavButtons.size() - maxVisibleNavButtons));
+        int endIndex = Math.min(startIndex + maxVisibleNavButtons, allNavButtons.size());
+
+        for (int i = startIndex; i < endIndex; i++) {
+            Button button = allNavButtons.get(i);
+            int buttonY = navPanelStartY + 25 + ((i - startIndex) * (buttonHeight + buttonSpacing));
+            button.setY(buttonY);
+            navigationButtons.add(button);
+            this.addRenderableWidget(button);
+        }
+
+        // Update scroll button states
+        navScrollUpButton.active = navScrollOffset > 0;
+        navScrollDownButton.active = navScrollOffset < allNavButtons.size() - maxVisibleNavButtons;
+
+        // Highlight the current page button if it's visible
+        for (Button button : navigationButtons) {
+            button.active = true; // Make all buttons active
+        }
+
+        // Find the current page button in the visible buttons and disable it
+        for (int i = 0; i < navigationButtons.size(); i++) {
+            if (startIndex + i == currentPage) {
+                navigationButtons.get(i).active = false;
+                break;
+            }
+        }
+
+        // Initialize the appropriate page based on the current page
+        switch (currentPage) {
+            case OVERVIEW_TASKS_PAGE:
+                initTasksPage();
+                break;
+            case HEALTH_AURA_PAGE:
+            case INTELLIGENCE_AURA_PAGE:
+            case SOCIAL_AURA_PAGE:
+            case ORGANIZATION_PRODUCTIVITY_AURA_PAGE:
+            case CREATIVE_HOBBY_AURA_PAGE:
+                // Initialize the aura category page
+                initAuraCategoryPage();
+                break;
+            case SKILL_TREES_PAGE:
+                // TODO: Implement skill trees page
+                initTiersPage(); // Temporary fallback
+                break;
+            case SETTINGS_PAGE:
+                // TODO: Implement settings page
+                initTiersPage(); // Temporary fallback
+                break;
         }
     }
 
@@ -108,24 +273,26 @@ public class ChronicleScreen extends Screen {
      * Initializes the tasks page with task management widgets
      */
     private void initTasksPage() {
-        // Add navigation button (only next page on tasks page)
-        this.addRenderableWidget(nextPageButton);
+        // Define content area bounds
+        int contentAreaStartY = guiTop + 85;
+        int contentAreaHeight = ySize - 95; // Leave space for header and filter controls
+        int contentAreaEndY = contentAreaStartY + contentAreaHeight;
 
-        // --- Task Input and Add Button ---
-        taskInputField = new EditBox(this.font, guiLeft + 10, guiTop + 40, 150, 20, Component.empty());
-        taskInputField.setMaxLength(50);
-        this.addRenderableWidget(taskInputField);
+        // Calculate maximum visible tasks to fit within the content area
+        maxVisibleTasks = Math.min(6, contentAreaHeight / 24);
 
-        addTaskButton = Button.builder(Component.literal("Add Task"), (button) -> {
-            String taskName = taskInputField.getValue();
-            if (!taskName.isEmpty()) {
-                Task newTask = new Task(taskName, false);
-                tasks.add(newTask);
-                TaskManager.addTask(newTask); // Add to TaskManager
-                taskInputField.setValue(""); // Clear input field
-                rebuildTaskCheckboxes(); // Rebuild the checkboxes after adding a task
-            }
-        }).pos(guiLeft + 170, guiTop + 40).size(70, 20).build();
+        // --- Add New Task Button at the bottom of the content area ---
+        // Make sure it fits within the GUI bounds
+        int addTaskButtonY = Math.min(guiTop + ySize - 25, contentAreaStartY + (maxVisibleTasks * 24) + 5);
+
+        addTaskButton = Button.builder(Component.literal("Add New Task"), (button) -> {
+            // TODO: Open a dialog or overlay to add a new task
+            // For now, just add a placeholder task
+            Task newTask = new Task("New Task", false);
+            tasks.add(newTask);
+            TaskManager.addTask(newTask); // Add to TaskManager
+            rebuildTaskCheckboxes(); // Rebuild the checkboxes after adding a task
+        }).pos(guiLeft + 180, addTaskButtonY).size(100, 20).build();
         this.addRenderableWidget(addTaskButton);
 
         // --- Add Scroll Buttons ---
@@ -134,7 +301,7 @@ public class ChronicleScreen extends Screen {
                 scrollOffset--;
                 rebuildTaskCheckboxes();
             }
-        }).pos(guiLeft + xSize - 30, guiTop + 70).size(20, 20).build();
+        }).pos(guiLeft + xSize - 30, contentAreaStartY).size(20, 20).build();
         this.addRenderableWidget(scrollUpButton);
 
         scrollDownButton = Button.builder(Component.literal("▼"), (button) -> {
@@ -142,7 +309,7 @@ public class ChronicleScreen extends Screen {
                 scrollOffset++;
                 rebuildTaskCheckboxes();
             }
-        }).pos(guiLeft + xSize - 30, guiTop + 70 + (maxVisibleTasks * 24)).size(20, 20).build();
+        }).pos(guiLeft + xSize - 30, contentAreaStartY + (maxVisibleTasks * 24) - 20).size(20, 20).build();
         this.addRenderableWidget(scrollDownButton);
 
         // Initially set visibility based on task count
@@ -158,9 +325,6 @@ public class ChronicleScreen extends Screen {
      * Initializes the tiers page with tier management widgets
      */
     private void initTiersPage() {
-        // Add navigation button (only prev page on tiers page)
-        this.addRenderableWidget(prevPageButton);
-
         // Add title for the tiers page
         // (This will be rendered in the render method)
 
@@ -218,42 +382,261 @@ public class ChronicleScreen extends Screen {
         this.addRenderableWidget(tier4Button);
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        // Only handle scrolling if we're on the tasks page
-        if (currentPage != TASKS_PAGE) {
-            return super.mouseScrolled(mouseX, mouseY, delta);
+    /**
+     * Initializes the aura category page with category-specific widgets
+     */
+    private void initAuraCategoryPage() {
+        // Reset scroll offset when switching pages
+        if (currentPage != HEALTH_AURA_PAGE && 
+            currentPage != INTELLIGENCE_AURA_PAGE && 
+            currentPage != SOCIAL_AURA_PAGE && 
+            currentPage != ORGANIZATION_PRODUCTIVITY_AURA_PAGE && 
+            currentPage != CREATIVE_HOBBY_AURA_PAGE) {
+            auraCategoryScrollOffset = 0;
         }
 
-        // Only handle scrolling if mouse is over the task list area
-        int taskListStartX = guiLeft + 10;
-        int taskListEndX = guiLeft + xSize - 10;
-        int taskListStartY = guiTop + 70; // Adjusted for navigation button
-        int taskListEndY = guiTop + 70 + (maxVisibleTasks * 24);
+        // Add scroll buttons for aura category content
+        int contentAreaStartY = guiTop + 50;
+        int contentAreaHeight = ySize - 60; // Leave space for header
 
-        if (mouseX >= taskListStartX && mouseX <= taskListEndX && 
-            mouseY >= taskListStartY && mouseY <= taskListEndY) {
+        auraCategoryScrollUpButton = Button.builder(Component.literal("▲"), (button) -> {
+            if (auraCategoryScrollOffset > 0) {
+                auraCategoryScrollOffset--;
+                clearWidgets();
+                init();
+            }
+        }).pos(guiLeft + xSize - 30, contentAreaStartY).size(20, 20).build();
+        this.addRenderableWidget(auraCategoryScrollUpButton);
+
+        auraCategoryScrollDownButton = Button.builder(Component.literal("▼"), (button) -> {
+            // The max scroll offset depends on the content height, which we don't know yet
+            // We'll update the button's active state in the render method
+            auraCategoryScrollOffset++;
+            clearWidgets();
+            init();
+        }).pos(guiLeft + xSize - 30, contentAreaStartY + contentAreaHeight - 25).size(20, 20).build();
+        this.addRenderableWidget(auraCategoryScrollDownButton);
+
+        // Add buttons at positions that respect the scroll offset
+        int buttonY = guiTop + 170 - (auraCategoryScrollOffset * 30);
+
+        // Only add buttons if they would be visible
+        if (buttonY >= contentAreaStartY && buttonY <= contentAreaStartY + contentAreaHeight - 25) {
+            // For now, we'll just add a button to increase the aura level for testing
+            Button increaseAuraButton = Button.builder(Component.literal("Increase Aura"), (button) -> {
+                net.amaha.habitmod.data.AuraManager.addAura(10);
+                Player player = Minecraft.getInstance().player;
+                if (player != null) {
+                    player.sendSystemMessage(Component.literal("Aura increased by 10. Current Aura: " + 
+                        net.amaha.habitmod.data.AuraManager.getAuraLevel()));
+                }
+            }).pos(guiLeft + xSize/2 - 45, buttonY).size(90, 20).build();
+            this.addRenderableWidget(increaseAuraButton);
+        }
+
+        buttonY = guiTop + 140 - (auraCategoryScrollOffset * 30);
+
+        // Only add buttons if they would be visible
+        if (buttonY >= contentAreaStartY && buttonY <= contentAreaStartY + contentAreaHeight - 25) {
+            // Add a button to filter tasks by the current category
+            Button filterTasksButton = Button.builder(Component.literal("Show Related Tasks"), (button) -> {
+                // This would filter tasks by category in a real implementation
+                Player player = Minecraft.getInstance().player;
+                if (player != null) {
+                    player.sendSystemMessage(Component.literal("Showing tasks for this category"));
+                }
+            }).pos(guiLeft + xSize/2 - 45, buttonY).size(90, 20).build();
+            this.addRenderableWidget(filterTasksButton);
+        }
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        // Handle scrolling based on the current page
+        if (currentPage == OVERVIEW_TASKS_PAGE) {
+            // Handle scrolling for the tasks page
+            // Only handle scrolling if mouse is over the task list area
+            int taskListStartX = guiLeft + 120;
+            int taskListEndX = guiLeft + xSize - 35;
+            int taskListStartY = guiTop + 85;
+            int taskListEndY = guiTop + 85 + (maxVisibleTasks * 24);
+
+            if (mouseX >= taskListStartX && mouseX <= taskListEndX && 
+                mouseY >= taskListStartY && mouseY <= taskListEndY) {
+
+                // Handle mouse wheel scrolling
+                if (delta > 0 && scrollOffset > 0) {
+                    // Scroll up
+                    scrollOffset--;
+                    rebuildTaskCheckboxes();
+                    return true;
+                } else if (delta < 0 && scrollOffset < Math.max(0, tasks.size() - maxVisibleTasks)) {
+                    // Scroll down
+                    scrollOffset++;
+                    rebuildTaskCheckboxes();
+                    return true;
+                }
+            }
+        } else if (currentPage == HEALTH_AURA_PAGE || 
+                  currentPage == INTELLIGENCE_AURA_PAGE || 
+                  currentPage == SOCIAL_AURA_PAGE || 
+                  currentPage == ORGANIZATION_PRODUCTIVITY_AURA_PAGE || 
+                  currentPage == CREATIVE_HOBBY_AURA_PAGE) {
+            // Handle scrolling for the aura category pages
+            // Only handle scrolling if mouse is over the content area
+            int contentAreaStartX = guiLeft + 120;
+            int contentAreaEndX = guiLeft + xSize - 35;
+            int contentAreaStartY = guiTop + 50;
+            int contentAreaEndY = guiTop + ySize - 10;
+
+            if (mouseX >= contentAreaStartX && mouseX <= contentAreaEndX && 
+                mouseY >= contentAreaStartY && mouseY <= contentAreaEndY) {
+
+                // Calculate total content height and max scroll offset
+                int contentY = contentAreaStartY;
+                int lineCount = 0;
+
+                // Count lines based on the current page
+                if (currentPage == HEALTH_AURA_PAGE) {
+                    lineCount = 20; // Approximate number of lines for Health Aura page
+                } else {
+                    lineCount = 15; // Approximate number of lines for other aura pages
+                }
+
+                int totalContentHeight = lineCount * 15;
+                int contentAreaHeight = contentAreaEndY - contentAreaStartY;
+                int maxScrollOffset = Math.max(0, (totalContentHeight - contentAreaHeight) / 15);
+
+                // Handle mouse wheel scrolling
+                if (delta > 0 && auraCategoryScrollOffset > 0) {
+                    // Scroll up
+                    auraCategoryScrollOffset--;
+                    clearWidgets();
+                    init();
+                    return true;
+                } else if (delta < 0 && auraCategoryScrollOffset < maxScrollOffset) {
+                    // Scroll down
+                    auraCategoryScrollOffset++;
+                    clearWidgets();
+                    init();
+                    return true;
+                }
+            }
+        } else if (mouseX >= guiLeft + 10 && mouseX <= guiLeft + 110 && 
+                  mouseY >= guiTop + 40 && mouseY <= guiTop + ySize - 10) {
+            // Handle scrolling for the navigation panel
+            // Only handle scrolling if mouse is over the navigation panel area
+
+            // Calculate max scroll offset
+            int maxScrollOffset = Math.max(0, 8 - maxVisibleNavButtons);
 
             // Handle mouse wheel scrolling
-            if (delta > 0 && scrollOffset > 0) {
+            if (delta > 0 && navScrollOffset > 0) {
                 // Scroll up
-                scrollOffset--;
-                rebuildTaskCheckboxes();
+                navScrollOffset--;
+                clearWidgets();
+                init();
                 return true;
-            } else if (delta < 0 && scrollOffset < Math.max(0, tasks.size() - maxVisibleTasks)) {
+            } else if (delta < 0 && navScrollOffset < maxScrollOffset) {
                 // Scroll down
-                scrollOffset++;
-                rebuildTaskCheckboxes();
+                navScrollOffset++;
+                clearWidgets();
+                init();
                 return true;
             }
         }
+
         return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     // Helper method to rebuild the list of checkboxes
+    /**
+     * Renders task icons, effort level, and freshness indicators for a task
+     * @param graphics The GuiGraphics instance
+     * @param task The task to render icons for
+     * @param x The x position to start rendering
+     * @param y The y position to start rendering
+     */
+    private void renderTaskIcons(GuiGraphics graphics, Task task, int x, int y) {
+        // Render category icon
+        String categoryIcon = "♥"; // Default to health
+        int categoryColor = 0xFF0000; // Red for health
+
+        // Determine category based on task name (in a real implementation, Task would have a category field)
+        String taskName = task.getName().toLowerCase();
+        if (taskName.contains("read") || taskName.contains("study") || taskName.contains("learn")) {
+            categoryIcon = "🧠"; // Intelligence
+            categoryColor = 0x0000FF; // Blue
+        } else if (taskName.contains("meet") || taskName.contains("call") || taskName.contains("social")) {
+            categoryIcon = "👥"; // Social
+            categoryColor = 0xFF00FF; // Magenta
+        } else if (taskName.contains("clean") || taskName.contains("organize") || taskName.contains("desk")) {
+            categoryIcon = "⚙️"; // Organization
+            categoryColor = 0x00FF00; // Green
+        } else if (taskName.contains("music") || taskName.contains("art") || taskName.contains("hobby")) {
+            categoryIcon = "🎵"; // Creative
+            categoryColor = 0x00FFFF; // Cyan
+        }
+
+        // Draw category icon
+        graphics.drawString(this.font, categoryIcon, x, y, categoryColor, false);
+
+        // Render effort level
+        String effortLevel = "M"; // Default to medium
+
+        // Determine effort level based on task name (in a real implementation, Task would have an effort field)
+        if (taskName.contains("quick") || taskName.contains("small") || taskName.contains("brief")) {
+            effortLevel = "S"; // Small
+        } else if (taskName.contains("big") || taskName.contains("large") || taskName.contains("major")) {
+            effortLevel = "L"; // Large
+        }
+
+        // Draw effort level
+        graphics.drawString(this.font, "[" + effortLevel + "]", x + 20, y, 0x808080, false);
+
+        // Render freshness indicator (in a real implementation, Task would track completion time)
+        // For now, just draw a random freshness level
+        int freshness = task.hashCode() % 5; // 0-4 freshness level
+        String freshnessBar = "";
+        int freshnessColor = 0x808080; // Gray
+
+        switch (freshness) {
+            case 0: // Very fresh
+                freshnessBar = "[███--]";
+                freshnessColor = 0x00FF00; // Green
+                break;
+            case 1: // Fresh
+                freshnessBar = "[████-]";
+                freshnessColor = 0x88FF00; // Yellow-green
+                break;
+            case 2: // Neutral
+                freshnessBar = "[█████]";
+                freshnessColor = 0xFFFF00; // Yellow
+                break;
+            case 3: // Stale
+                freshnessBar = "[█----]";
+                freshnessColor = 0xFF8800; // Orange
+                break;
+            case 4: // Very stale
+                freshnessBar = "[--]";
+                freshnessColor = 0xFF0000; // Red
+                break;
+        }
+
+        // Draw freshness bar
+        graphics.drawString(this.font, freshnessBar, x + 40, y, freshnessColor, false);
+
+        // Draw "Done" button (this is just visual, the actual button is the checkbox)
+        if (task.isCompleted()) {
+            graphics.drawString(this.font, "[Done]", x + 90, y, 0x00FF00, false);
+        } else {
+            graphics.drawString(this.font, "[Done]", x + 90, y, 0x808080, false);
+        }
+    }
+
     private void rebuildTaskCheckboxes() {
-        // Only rebuild if we're on the tasks page
-        if (currentPage != TASKS_PAGE) return;
+        // Only rebuild if we're on the overview/tasks page
+        if (currentPage != OVERVIEW_TASKS_PAGE) return;
 
         // Clear existing checkboxes and buttons from the screen
         taskCheckboxes.forEach(this::removeWidget);
@@ -272,7 +655,7 @@ public class ChronicleScreen extends Screen {
         int startIndex = scrollOffset;
         int endIndex = Math.min(startIndex + maxVisibleTasks, tasks.size());
 
-        int yOffset = guiTop + 70; // Starting Y position for task list (adjusted for navigation button)
+        int yOffset = guiTop + 85; // Starting Y position for task list in the central content area
 
         // Update scroll buttons state
         boolean needsScrolling = tasks.size() > maxVisibleTasks;
@@ -287,10 +670,11 @@ public class ChronicleScreen extends Screen {
             Task task = tasks.get(taskIndex);
 
             // Checkbox takes (x, y, width, height, message, checked)
+            // Use a shorter width to make room for category icon, effort level, and freshness indicators
             Checkbox checkbox = new Checkbox(
-                    guiLeft + 10, yOffset,
-                    xSize - 100, 20, // Reduced width to make room for buttons
-                    Component.literal(task.getName()),
+                    guiLeft + 120, yOffset,
+                    xSize - 200, 20, // Reduced width to make room for icons and buttons
+                    Component.literal("Task: " + task.getName()),
                     task.isCompleted()
             ) {
                 // Override onClick to handle our custom logic
@@ -345,14 +729,14 @@ public class ChronicleScreen extends Screen {
                 editingTaskIndex = taskIndex;
 
                 // Create edit field
-                taskEditField = new EditBox(this.font, guiLeft + 10, finalYOffset, xSize - 100, 20, Component.empty());
+                taskEditField = new EditBox(this.font, guiLeft + 120, finalYOffset, xSize - 150, 20, Component.empty());
                 taskEditField.setMaxLength(50);
                 taskEditField.setValue(task.getName());
                 this.addRenderableWidget(taskEditField);
 
                 // Rebuild to hide the checkbox and show the edit field
                 rebuildTaskCheckboxes();
-            }).pos(guiLeft + xSize - 80, yOffset).size(30, 20).build();
+            }).pos(guiLeft + xSize - 60, yOffset).size(25, 20).build();
             this.addRenderableWidget(renameButton);
 
             // Add delete button
@@ -368,7 +752,7 @@ public class ChronicleScreen extends Screen {
 
                 // Rebuild the checkboxes
                 rebuildTaskCheckboxes();
-            }).pos(guiLeft + xSize - 45, yOffset).size(30, 20).build();
+            }).pos(guiLeft + xSize - 30, yOffset).size(25, 20).build();
             this.addRenderableWidget(deleteButton);
 
             yOffset += 24; // Spacing for next task (checkbox height + padding)
@@ -378,10 +762,10 @@ public class ChronicleScreen extends Screen {
         if (editingTaskIndex >= 0 && editingTaskIndex < tasks.size()) {
             // Only create the edit field if it doesn't exist
             if (taskEditField == null) {
-                int editYOffset = guiTop + 70 + ((editingTaskIndex - scrollOffset) * 24); // Adjusted for navigation button
+                int editYOffset = guiTop + 85 + ((editingTaskIndex - scrollOffset) * 24); // Adjusted for central content area
 
                 // Create edit field
-                taskEditField = new EditBox(this.font, guiLeft + 10, editYOffset, xSize - 100, 20, Component.empty());
+                taskEditField = new EditBox(this.font, guiLeft + 120, editYOffset, xSize - 150, 20, Component.empty());
                 taskEditField.setMaxLength(50);
                 taskEditField.setValue(tasks.get(editingTaskIndex).getName());
                 this.addRenderableWidget(taskEditField);
@@ -405,7 +789,7 @@ public class ChronicleScreen extends Screen {
 
                     // Rebuild the checkboxes
                     rebuildTaskCheckboxes();
-                }).pos(guiLeft + xSize - 80, editYOffset).size(30, 20).build();
+                }).pos(guiLeft + xSize - 60, editYOffset).size(25, 20).build();
                 this.addRenderableWidget(saveButton);
 
                 // Add cancel button
@@ -415,7 +799,7 @@ public class ChronicleScreen extends Screen {
 
                     // Rebuild the checkboxes
                     rebuildTaskCheckboxes();
-                }).pos(guiLeft + xSize - 45, editYOffset).size(30, 20).build();
+                }).pos(guiLeft + xSize - 30, editYOffset).size(25, 20).build();
                 this.addRenderableWidget(cancelButton);
 
                 // Hide the checkbox for this task
@@ -441,40 +825,131 @@ public class ChronicleScreen extends Screen {
         // Render widgets (input field, buttons, checkboxes)
         super.render(graphics, mouseX, mouseY, partialTick);
 
-        // Render screen title
-        String pageTitle = this.title.getString();
-        if (currentPage == TIERS_PAGE) {
-            pageTitle += " - Aura Tiers";
-        } else {
-            pageTitle += " - Tasks";
+        // --- Render Top Header Area ---
+        // Render mod title
+        String modTitle = "Chronicle of Deeds";
+        graphics.drawString(this.font, modTitle, guiLeft + 10, guiTop + 10, 0x404040, false);
+
+        // Render Productivity Aura display
+        int auraLevel = net.amaha.habitmod.data.AuraManager.getAuraLevel();
+        int tier = net.amaha.habitmod.data.AuraManager.getCurrentTier();
+        int maxTierLevel = 0;
+
+        // Determine max level for current tier
+        switch (tier) {
+            case 0:
+                maxTierLevel = net.amaha.habitmod.data.AuraManager.TIER_0_MAX;
+                break;
+            case 1:
+                maxTierLevel = net.amaha.habitmod.data.AuraManager.TIER_1_MAX;
+                break;
+            case 2:
+                maxTierLevel = net.amaha.habitmod.data.AuraManager.TIER_2_MAX;
+                break;
+            case 3:
+                maxTierLevel = net.amaha.habitmod.data.AuraManager.TIER_3_MAX;
+                break;
+            case 4:
+                maxTierLevel = Integer.MAX_VALUE; // No upper limit for tier 4
+                break;
         }
-        graphics.drawString(this.font, pageTitle, guiLeft + xSize / 2 - font.width(pageTitle) / 2, guiTop + 5, 0x404040, false);
+
+        // Display aura level text
+        String auraText = "Productivity Aura: " + auraLevel + " / ";
+        if (tier == 4) {
+            auraText += "151+"; // For tier 4, show the minimum threshold
+        } else {
+            auraText += maxTierLevel;
+        }
+        graphics.drawString(this.font, auraText, guiLeft + 10, guiTop + 25, 0x00FF00, false);
+
+        // Draw progress bar
+        int barWidth = 150;
+        int barHeight = 5;
+        int barX = guiLeft + 10;
+        int barY = guiTop + 35;
+
+        // Draw background (empty) bar
+        graphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0x33000000);
+
+        // Calculate filled portion
+        float fillPercentage = 0;
+        if (tier < 4) {
+            // For tiers 0-3, calculate based on current tier's range
+            int minTierLevel = 0;
+            switch (tier) {
+                case 1:
+                    minTierLevel = net.amaha.habitmod.data.AuraManager.TIER_0_MAX + 1;
+                    break;
+                case 2:
+                    minTierLevel = net.amaha.habitmod.data.AuraManager.TIER_1_MAX + 1;
+                    break;
+                case 3:
+                    minTierLevel = net.amaha.habitmod.data.AuraManager.TIER_2_MAX + 1;
+                    break;
+            }
+            fillPercentage = (float)(auraLevel - minTierLevel) / (maxTierLevel - minTierLevel);
+        } else {
+            // For tier 4, just show full
+            fillPercentage = 1.0f;
+        }
+
+        // Ensure fill percentage is between 0 and 1
+        fillPercentage = Math.max(0, Math.min(1, fillPercentage));
+
+        // Draw filled portion
+        int fillWidth = (int)(barWidth * fillPercentage);
+        graphics.fill(barX, barY, barX + fillWidth, barY + barHeight, getTierColor(tier));
 
         // Render page-specific content
-        if (currentPage == TASKS_PAGE) {
+        if (currentPage == OVERVIEW_TASKS_PAGE) {
             renderTasksPage(graphics, mouseX, mouseY, partialTick);
+        } else if (currentPage == HEALTH_AURA_PAGE || 
+                  currentPage == INTELLIGENCE_AURA_PAGE || 
+                  currentPage == SOCIAL_AURA_PAGE || 
+                  currentPage == ORGANIZATION_PRODUCTIVITY_AURA_PAGE || 
+                  currentPage == CREATIVE_HOBBY_AURA_PAGE) {
+            renderAuraCategoryPage(graphics, mouseX, mouseY, partialTick);
         } else {
             renderTiersPage(graphics, mouseX, mouseY, partialTick);
         }
-
-        // Render aura information (shown on both pages)
-        int auraLevel = net.amaha.habitmod.data.AuraManager.getAuraLevel();
-        int tier = net.amaha.habitmod.data.AuraManager.getCurrentTier();
-        String tierName = getTierName(tier);
-
-        // Display aura level
-        String auraText = "Aura Level: " + auraLevel;
-        graphics.drawString(this.font, auraText, guiLeft + 10, guiTop + ySize - 30, 0x00FF00, false);
-
-        // Display tier
-        String tierText = "Current Tier: " + tier + " - " + tierName;
-        graphics.drawString(this.font, tierText, guiLeft + 10, guiTop + ySize - 20, getTierColor(tier), false);
     }
 
     /**
      * Renders content specific to the tasks page
      */
     private void renderTasksPage(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // Draw central content area title
+        String tasksTitle = "Task Management";
+        graphics.drawString(this.font, tasksTitle, guiLeft + 120, guiTop + 50, 0x404040, false);
+
+        // Draw filter and sort controls
+        String filterLabel = "Filter: All";
+        graphics.drawString(this.font, filterLabel, guiLeft + 120, guiTop + 65, 0x808080, false);
+
+        String sortLabel = "Sort: Freshness";
+        graphics.drawString(this.font, sortLabel, guiLeft + 220, guiTop + 65, 0x808080, false);
+
+        // Draw task list header
+        int taskListX = guiLeft + 120;
+        int taskListY = guiTop + 85;
+        int taskListWidth = xSize - 130;
+
+        // Draw task list background
+        graphics.fill(taskListX, taskListY, taskListX + taskListWidth, taskListY + (maxVisibleTasks * 24), 0x22000000);
+
+        // Render task icons for each visible task
+        int startIndex = scrollOffset;
+        int endIndex = Math.min(startIndex + maxVisibleTasks, tasks.size());
+
+        for (int i = startIndex; i < endIndex; i++) {
+            Task task = tasks.get(i);
+            int taskY = taskListY + ((i - startIndex) * 24) + 2; // +2 to center vertically with checkbox
+
+            // Render task icons at the appropriate position
+            renderTaskIcons(graphics, task, taskListX + xSize - 190, taskY);
+        }
+
         // Render scroll indicators if needed
         if (tasks.size() > maxVisibleTasks) {
             // Show scroll position indicator
@@ -486,7 +961,7 @@ public class ChronicleScreen extends Screen {
             // Draw scroll track
             int trackHeight = maxVisibleTasks * 24;
             int trackX = guiLeft + xSize - 10;
-            int trackY = guiTop + 70;
+            int trackY = taskListY;
 
             // Draw track background
             graphics.fill(trackX, trackY, trackX + 5, trackY + trackHeight, 0x33000000);
@@ -498,8 +973,32 @@ public class ChronicleScreen extends Screen {
 
             // Show task count
             String taskCountText = scrollOffset + 1 + "-" + Math.min(scrollOffset + maxVisibleTasks, tasks.size()) + " of " + tasks.size();
-            graphics.drawString(this.font, taskCountText, guiLeft + 10, guiTop + 70 + (maxVisibleTasks * 24) + 5, 0x808080, false);
+            graphics.drawString(this.font, taskCountText, taskListX, taskListY + (maxVisibleTasks * 24) + 5, 0x808080, false);
         }
+
+        // Draw category icons legend
+        int legendX = guiLeft + 120;
+        int legendY = taskListY + (maxVisibleTasks * 24) + 20;
+
+        // Health icon
+        graphics.drawString(this.font, "♥", legendX, legendY, 0xFF0000, false);
+        graphics.drawString(this.font, "Health", legendX + 15, legendY, 0x808080, false);
+
+        // Intelligence icon
+        graphics.drawString(this.font, "🧠", legendX + 70, legendY, 0x0000FF, false);
+        graphics.drawString(this.font, "Intelligence", legendX + 85, legendY, 0x808080, false);
+
+        // Social icon
+        graphics.drawString(this.font, "👥", legendX + 170, legendY, 0xFF00FF, false);
+        graphics.drawString(this.font, "Social", legendX + 185, legendY, 0x808080, false);
+
+        // Organization icon
+        graphics.drawString(this.font, "⚙️", legendX, legendY + 15, 0x00FF00, false);
+        graphics.drawString(this.font, "Organization", legendX + 15, legendY + 15, 0x808080, false);
+
+        // Creative icon
+        graphics.drawString(this.font, "🎵", legendX + 120, legendY + 15, 0x00FFFF, false);
+        graphics.drawString(this.font, "Creative", legendX + 135, legendY + 15, 0x808080, false);
     }
 
     /**
@@ -522,6 +1021,255 @@ public class ChronicleScreen extends Screen {
             graphics.drawString(this.font, "Tier 2: 151-300", descX, descY + 60, descColor, false);
             graphics.drawString(this.font, "Tier 3: 301-500", descX, descY + 90, descColor, false);
             graphics.drawString(this.font, "Tier 4: 501+", descX, descY + 120, descColor, false);
+        }
+    }
+
+    /**
+     * Renders content specific to the aura category page
+     */
+    private void renderAuraCategoryPage(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // Get the current aura level (for now, we'll use the overall aura level)
+        int auraLevel = net.amaha.habitmod.data.AuraManager.getAuraLevel();
+
+        // Determine the category name and color based on the current page
+        String categoryName = "";
+        int categoryColor = 0xFFFFFF;
+        String categoryIcon = "";
+
+        switch (currentPage) {
+            case HEALTH_AURA_PAGE:
+                categoryName = "Health";
+                categoryColor = 0xFF0000; // Red
+                categoryIcon = "♥";
+                break;
+            case INTELLIGENCE_AURA_PAGE:
+                categoryName = "Intelligence";
+                categoryColor = 0x0000FF; // Blue
+                categoryIcon = "🧠";
+                break;
+            case SOCIAL_AURA_PAGE:
+                categoryName = "Social";
+                categoryColor = 0xFF00FF; // Magenta
+                categoryIcon = "👥";
+                break;
+            case ORGANIZATION_PRODUCTIVITY_AURA_PAGE:
+                categoryName = "Organization & Productivity";
+                categoryColor = 0x00FF00; // Green
+                categoryIcon = "⚙️";
+                break;
+            case CREATIVE_HOBBY_AURA_PAGE:
+                categoryName = "Creative & Hobby";
+                categoryColor = 0x00FFFF; // Cyan
+                categoryIcon = "🎵";
+                break;
+        }
+
+        // For demonstration, we'll simulate different aura levels for each category
+        // In a real implementation, each category would have its own aura level
+        int categoryAuraLevel = auraLevel;
+        if (currentPage == HEALTH_AURA_PAGE) {
+            categoryAuraLevel = 75; // Fixed value for demonstration
+        }
+
+        // --- Render Top Header Area (Individual Aura) ---
+        // Specific Aura Name & Level
+        String auraText = categoryName + " Aura: " + categoryAuraLevel;
+        graphics.drawString(this.font, auraText, guiLeft + 10, guiTop + 25, categoryColor, false);
+
+        // Progress Bar for this specific aura
+        int barWidth = 150;
+        int barHeight = 5;
+        int barX = guiLeft + 10;
+        int barY = guiTop + 35;
+
+        // Draw background (empty) bar
+        graphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0x33000000);
+
+        // Calculate filled portion (simplified for demonstration)
+        float fillPercentage = categoryAuraLevel / 100.0f; // Assuming max is 100
+        fillPercentage = Math.max(0, Math.min(1, fillPercentage));
+
+        // Draw filled portion
+        int fillWidth = (int)(barWidth * fillPercentage);
+        graphics.fill(barX, barY, barX + fillWidth, barY + barHeight, categoryColor);
+
+        // --- Define content area bounds ---
+        int contentAreaStartY = guiTop + 50;
+        int contentAreaHeight = ySize - 60; // Leave space for header
+        int contentAreaEndY = contentAreaStartY + contentAreaHeight;
+
+        // --- Render Central Content Area (Individual Aura) ---
+        int contentX = guiLeft + 120;
+        // Adjust contentY based on scroll offset
+        int contentY = contentAreaStartY - (auraCategoryScrollOffset * 15);
+
+        // Draw content area background
+        graphics.fill(guiLeft + 120, contentAreaStartY, guiLeft + xSize - 35, contentAreaEndY, 0x22000000);
+
+        // Only render content if it would be visible
+        if (contentY >= contentAreaStartY - 30 && contentY <= contentAreaEndY) {
+            // Current Tier Status
+            String tierStatus = categoryName + " Aura Status: Tier 51-100 (Awakened)";
+            graphics.drawString(this.font, tierStatus, contentX, contentY, 0x404040, false);
+        }
+        contentY += 20;
+
+        // Draw separator line if visible
+        if (contentY >= contentAreaStartY - 5 && contentY <= contentAreaEndY) {
+            graphics.fill(contentX, contentY, contentX + xSize - 150, contentY + 1, 0x33000000);
+        }
+        contentY += 10;
+
+        // Active Benefits
+        if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+            graphics.drawString(this.font, "Benefits:", contentX, contentY, 0x404040, false);
+        }
+        contentY += 15;
+
+        // List of benefits (example for Health Aura)
+        if (currentPage == HEALTH_AURA_PAGE) {
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, categoryIcon + " Permanent Regeneration I", contentX, contentY, categoryColor, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "❤︎❤︎ +2 Max Health", contentX, contentY, categoryColor, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "🪶 Reduced Fall Damage (Feather Falling I)", contentX, contentY, categoryColor, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "🔥 Permanent Fire Protection I", contentX, contentY, categoryColor, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "🍔 Food 0% Hunger Chance", contentX, contentY, categoryColor, false);
+            }
+            contentY += 15;
+        } else {
+            // Generic benefits for other categories
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, categoryIcon + " Benefit 1", contentX, contentY, categoryColor, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, categoryIcon + " Benefit 2", contentX, contentY, categoryColor, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, categoryIcon + " Benefit 3", contentX, contentY, categoryColor, false);
+            }
+            contentY += 15;
+        }
+
+        // Draw separator line
+        contentY += 5;
+        if (contentY >= contentAreaStartY - 5 && contentY <= contentAreaEndY) {
+            graphics.fill(contentX, contentY, contentX + xSize - 150, contentY + 1, 0x33000000);
+        }
+        contentY += 10;
+
+        // Next Tier Benefits
+        if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+            String nextTierText = "Next Unlock at 101 " + categoryName + " Aura:";
+            graphics.drawString(this.font, nextTierText, contentX, contentY, 0x404040, false);
+        }
+        contentY += 15;
+
+        // List of next tier benefits (example for Health Aura)
+        if (currentPage == HEALTH_AURA_PAGE) {
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "⚡ Permanent Haste I", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "❤︎❤︎❤︎❤︎ +4 Max Health", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "💧 Significantly Reduced Environmental Damage", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+        } else {
+            // Generic next tier benefits for other categories
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "⚡ Next Tier Benefit 1", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "⚡ Next Tier Benefit 2", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+        }
+
+        // Draw separator line
+        contentY += 5;
+        if (contentY >= contentAreaStartY - 5 && contentY <= contentAreaEndY) {
+            graphics.fill(contentX, contentY, contentX + xSize - 150, contentY + 1, 0x33000000);
+        }
+        contentY += 10;
+
+        // Associated Tasks
+        if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+            graphics.drawString(this.font, "Associated Tasks:", contentX, contentY, 0x404040, false);
+        }
+        contentY += 15;
+
+        // List of associated tasks (example for Health Aura)
+        if (currentPage == HEALTH_AURA_PAGE) {
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "Task: Workout          [M] [███--] [Done]", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "Task: Floss            [S] [████-] [Done]", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+        } else {
+            // Generic tasks for other categories
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "Task: Category Task 1  [M] [███--] [Done]", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+
+            if (contentY >= contentAreaStartY - 15 && contentY <= contentAreaEndY) {
+                graphics.drawString(this.font, "Task: Category Task 2  [S] [████-] [Done]", contentX, contentY, 0x808080, false);
+            }
+            contentY += 15;
+        }
+
+        // Calculate total content height and update scroll button states
+        int totalContentHeight = contentY - (contentAreaStartY - (auraCategoryScrollOffset * 15));
+        int maxScrollOffset = Math.max(0, (totalContentHeight - contentAreaHeight) / 15);
+
+        // Update scroll button states
+        auraCategoryScrollUpButton.active = auraCategoryScrollOffset > 0;
+        auraCategoryScrollDownButton.active = auraCategoryScrollOffset < maxScrollOffset;
+
+        // Draw scroll position indicator
+        if (maxScrollOffset > 0) {
+            float percentScrolled = (float) auraCategoryScrollOffset / maxScrollOffset;
+            int trackHeight = contentAreaHeight - 50; // Leave space for scroll buttons
+            int thumbHeight = Math.max(20, (int)(trackHeight / (maxScrollOffset + 1)));
+            int thumbY = contentAreaStartY + 25 + (int)((trackHeight - thumbHeight) * percentScrolled);
+
+            // Draw scroll track
+            graphics.fill(guiLeft + xSize - 25, contentAreaStartY + 25, guiLeft + xSize - 20, contentAreaStartY + trackHeight + 25, 0x33000000);
+
+            // Draw scroll thumb
+            graphics.fill(guiLeft + xSize - 25, thumbY, guiLeft + xSize - 20, thumbY + thumbHeight, 0x66FFFFFF);
         }
     }
 
