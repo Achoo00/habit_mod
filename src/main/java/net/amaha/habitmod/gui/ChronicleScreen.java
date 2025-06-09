@@ -453,7 +453,8 @@ public class ChronicleScreen extends Screen {
             case OVERVIEW_TASKS_PAGE -> initTasksPage();
             case HEALTH_AURA_PAGE, INTELLIGENCE_AURA_PAGE, SOCIAL_AURA_PAGE,
                  ORGANIZATION_PRODUCTIVITY_AURA_PAGE, CREATIVE_HOBBY_AURA_PAGE -> initAuraCategoryPage();
-            case SKILL_TREES_PAGE, SETTINGS_PAGE -> initTiersPage(); // placeholder
+            case SKILL_TREES_PAGE -> initTiersPage(); // debug buttons for Productivity Aura
+            case SETTINGS_PAGE -> initHealthTiersPage(); // debug buttons for Health Aura
         }
     }
 
@@ -585,6 +586,58 @@ public class ChronicleScreen extends Screen {
             Player player = Minecraft.getInstance().player;
             if (player != null) {
                 player.sendSystemMessage(Component.literal("Aura set to 600 (Tier 4: End-Game Luminary)"));
+            }
+        }).pos(guiLeft + xSize/2 - 45, guiTop + 170).size(90, 20).build();
+        this.addRenderableWidget(tier4Button);
+    }
+
+    private void initHealthTiersPage() {
+        // Tier 0 button (0-50 aura)
+        tier0Button = Button.builder(Component.literal("Set Tier 0"), (button) -> {
+            net.amaha.habitmod.data.AuraManager.setHealthAuraLevel(0);
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("Aura set to 0 (Tier 0)"));
+            }
+        }).pos(guiLeft + xSize/2 - 45, guiTop + 50).size(90, 20).build();
+        this.addRenderableWidget(tier0Button);
+
+        // Tier 1 button (51-150 aura)
+        tier1Button = Button.builder(Component.literal("Set Tier 1"), (button) -> {
+            net.amaha.habitmod.data.AuraManager.setHealthAuraLevel(50);
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("Aura set to 50 (Tier 1)"));
+            }
+        }).pos(guiLeft + xSize/2 - 45, guiTop + 80).size(90, 20).build();
+        this.addRenderableWidget(tier1Button);
+
+        // Tier 2 button (151-300 aura)
+        tier2Button = Button.builder(Component.literal("Set Tier 2"), (button) -> {
+            net.amaha.habitmod.data.AuraManager.setHealthAuraLevel(100);
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("Aura set to 100 (Tier 2)"));
+            }
+        }).pos(guiLeft + xSize/2 - 45, guiTop + 110).size(90, 20).build();
+        this.addRenderableWidget(tier2Button);
+
+        // Tier 3 button (301-500 aura)
+        tier3Button = Button.builder(Component.literal("Set Tier 3"), (button) -> {
+            net.amaha.habitmod.data.AuraManager.setHealthAuraLevel(150);
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("Aura set to 150 (Tier 3)"));
+            }
+        }).pos(guiLeft + xSize/2 - 45, guiTop + 140).size(90, 20).build();
+        this.addRenderableWidget(tier3Button);
+
+        // Tier 4 button (501+ aura)
+        tier4Button = Button.builder(Component.literal("Set Tier 4"), (button) -> {
+            net.amaha.habitmod.data.AuraManager.setHealthAuraLevel(200);
+            Player player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("Aura set to 200 (Tier 4)"));
             }
         }).pos(guiLeft + xSize/2 - 45, guiTop + 170).size(90, 20).build();
         this.addRenderableWidget(tier4Button);

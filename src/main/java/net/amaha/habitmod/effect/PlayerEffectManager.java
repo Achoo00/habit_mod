@@ -51,7 +51,7 @@ public class PlayerEffectManager {
     private static final int AURA_DECAY_INTERVAL = 600; // 30 seconds (20 ticks per second)
 
     // Effect durations and amplifiers
-    private static final int EFFECT_DURATION = 200; // 10 seconds (longer than check interval to ensure continuous effect)
+    private static final int EFFECT_DURATION = Integer.MAX_VALUE; // 10 seconds (longer than check interval to ensure continuous effect)
     private static final int SLOWNESS_AMPLIFIER = 0; // Amplifier 0 = 10% slower
     private static final int WEAKNESS_AMPLIFIER = 0; // Amplifier 0 = 0.5 less damage
     private static final int HUNGER_AMPLIFIER = 0; // Amplifier 0 = hunger depletes faster
@@ -258,6 +258,7 @@ public class PlayerEffectManager {
         }
     }
 
+    // Bug: Player does not keep effects after respawn
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         Player player = event.getEntity();
 
