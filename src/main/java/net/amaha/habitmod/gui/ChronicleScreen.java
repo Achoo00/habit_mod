@@ -382,7 +382,7 @@ public class ChronicleScreen extends Screen {
                 player.sendSystemMessage(Component.literal("You confessed to cheating! Consequences will follow..."));
                 net.amaha.habitmod.data.AuraManager.removeAura(50);
             }
-        }).pos(guiLeft + 10, guiTop + ySize - 30).size(90, 20).build();
+        }).pos(guiLeft + 35, guiTop + ySize - 30).size(75, 20).build();
         this.addRenderableWidget(confessCheatButton);
 
         // --- Init Navigation Button Lists ---
@@ -477,7 +477,7 @@ public class ChronicleScreen extends Screen {
             if (player != null) {
                 player.sendSystemMessage(Component.literal("Filter options will be shown here"));
             }
-        }).pos(guiLeft + 120, guiTop + 40).size(60, 20).build();
+        }).pos(guiLeft + 120, guiTop + 50).size(60, 20).build();
         this.addRenderableWidget(filterButton);
 
         Button sortButton = Button.builder(Component.literal("Sort"), (button) -> {
@@ -486,7 +486,7 @@ public class ChronicleScreen extends Screen {
             if (player != null) {
                 player.sendSystemMessage(Component.literal("Sort options will be shown here"));
             }
-        }).pos(guiLeft + 220, guiTop + 40).size(60, 20).build();
+        }).pos(guiLeft + 185, guiTop + 50).size(60, 20).build();
         this.addRenderableWidget(sortButton);
 
         // --- Add New Task Button at the bottom of the content area ---
@@ -509,7 +509,7 @@ public class ChronicleScreen extends Screen {
                 scrollOffset--;
                 rebuildTaskCheckboxes();
             }
-        }).pos(guiLeft + xSize - 30, contentAreaStartY).size(20, 20).build();
+        }).pos(guiLeft + xSize - 30, guiTop+75).size(20, 20).build();
         this.addRenderableWidget(scrollUpButton);
 
         scrollDownButton = Button.builder(Component.literal("▼"), (button) -> {
@@ -517,7 +517,7 @@ public class ChronicleScreen extends Screen {
                 scrollOffset++;
                 rebuildTaskCheckboxes();
             }
-        }).pos(guiLeft + xSize - 30, contentAreaStartY + (maxVisibleTasks * 24) - 20).size(20, 20).build();
+        }).pos(guiLeft + xSize - 30, contentAreaStartY+50).size(20, 20).build();
         this.addRenderableWidget(scrollDownButton);
 
         // Initially set visibility based on task count
@@ -541,40 +541,40 @@ public class ChronicleScreen extends Screen {
 
         // Tier 0 button (0-50 aura)
         tier0Button = Button.builder(Component.literal("Set Tier 0"), (button) -> {
-            net.amaha.habitmod.data.AuraManager.setAuraLevel(25);
+            net.amaha.habitmod.data.AuraManager.setAuraLevel(0);
             Player player = Minecraft.getInstance().player;
             if (player != null) {
-                player.sendSystemMessage(Component.literal("Aura set to 25 (Tier 0: Incapable Builder)"));
+                player.sendSystemMessage(Component.literal("Aura set to 0 (Tier 0: Incapable Builder)"));
             }
         }).pos(guiLeft + xSize/2 - 45, guiTop + 50).size(90, 20).build();
         this.addRenderableWidget(tier0Button);
 
         // Tier 1 button (51-150 aura)
         tier1Button = Button.builder(Component.literal("Set Tier 1"), (button) -> {
-            net.amaha.habitmod.data.AuraManager.setAuraLevel(100);
+            net.amaha.habitmod.data.AuraManager.setAuraLevel(150);
             Player player = Minecraft.getInstance().player;
             if (player != null) {
-                player.sendSystemMessage(Component.literal("Aura set to 100 (Tier 1: Awakened Apprentice)"));
+                player.sendSystemMessage(Component.literal("Aura set to 150 (Tier 1: Awakened Apprentice)"));
             }
         }).pos(guiLeft + xSize/2 - 45, guiTop + 80).size(90, 20).build();
         this.addRenderableWidget(tier1Button);
 
         // Tier 2 button (151-300 aura)
         tier2Button = Button.builder(Component.literal("Set Tier 2"), (button) -> {
-            net.amaha.habitmod.data.AuraManager.setAuraLevel(200);
+            net.amaha.habitmod.data.AuraManager.setAuraLevel(300);
             Player player = Minecraft.getInstance().player;
             if (player != null) {
-                player.sendSystemMessage(Component.literal("Aura set to 200 (Tier 2: Diligent Crafter)"));
+                player.sendSystemMessage(Component.literal("Aura set to 300 (Tier 2: Diligent Crafter)"));
             }
         }).pos(guiLeft + xSize/2 - 45, guiTop + 110).size(90, 20).build();
         this.addRenderableWidget(tier2Button);
 
         // Tier 3 button (301-500 aura)
         tier3Button = Button.builder(Component.literal("Set Tier 3"), (button) -> {
-            net.amaha.habitmod.data.AuraManager.setAuraLevel(400);
+            net.amaha.habitmod.data.AuraManager.setAuraLevel(500);
             Player player = Minecraft.getInstance().player;
             if (player != null) {
-                player.sendSystemMessage(Component.literal("Aura set to 400 (Tier 3: Master Builder)"));
+                player.sendSystemMessage(Component.literal("Aura set to 500 (Tier 3: Master Builder)"));
             }
         }).pos(guiLeft + xSize/2 - 45, guiTop + 140).size(90, 20).build();
         this.addRenderableWidget(tier3Button);
@@ -1200,17 +1200,17 @@ public class ChronicleScreen extends Screen {
      */
     private void renderTasksPage(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // Draw central content area title (This position is good)
-        String tasksTitle = "Task Management";
-        int titleWidth = this.font.width(tasksTitle);
-        graphics.drawString(this.font, tasksTitle, guiLeft + xSize / 2 - titleWidth / 2, guiTop + 15, 0x404040, false);
+        // String tasksTitle = "Task Management";
+        // int titleWidth = this.font.width(tasksTitle);
+        // graphics.drawString(this.font, tasksTitle, guiLeft + xSize / 2 - titleWidth / 2, guiTop + 15, 0x404040, false);
 
         // Draw filter and sort controls (MOVED UP)
-        String filterLabel = "Filter: All";
+        // String filterLabel = "Filter: All";
         // Placed below "Task Management" title, with some padding
-        graphics.drawString(this.font, filterLabel, guiLeft + 120, guiTop + 40, 0x808080, false); // New Y position: guiTop + 40
+        // graphics.drawString(this.font, filterLabel, guiLeft + 120, guiTop + 40, 0x808080, false);
 
-        String sortLabel = "Sort: Freshness";
-        graphics.drawString(this.font, sortLabel, guiLeft + 220, guiTop + 40, 0x808080, false); // New Y position: guiTop + 40
+        // String sortLabel = "Sort: Freshness";
+        // graphics.drawString(this.font, sortLabel, guiLeft + 220, guiTop + 40, 0x808080, false);
 
         // Draw task list header
         int taskListX = guiLeft + 120; // This X position remains consistent for the main content block
@@ -1322,6 +1322,12 @@ public class ChronicleScreen extends Screen {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
 
+        // Define the main content area for this page
+        int navPanelWidth = 100; // Assuming nav panel is 100px wide
+        int contentRenderStartX = guiLeft + navPanelWidth + 10 + 10; // guiLeft + navPanelWidth + padding_after_nav + inner_padding
+        int contentRenderEndX = guiLeft + xSize - 10; // Right edge of GUI - padding
+        int contentRenderWidth = contentRenderEndX - contentRenderStartX;
+
         int auraLevel = currentPage.getAuraLevel();
         String categoryName = currentPage.getDisplayName().getString();
         int categoryColor = currentPage.getCategoryColor();
@@ -1331,16 +1337,16 @@ public class ChronicleScreen extends Screen {
         String auraText = categoryName + " Aura: " + auraLevel;
         int titleWidth = font.width(auraText);
         graphics.drawString(font, Component.literal(auraText),
-                (this.width / 2) - (titleWidth / 2),
+                contentRenderStartX + (contentRenderWidth/2) - (titleWidth/2),
                 28,
                 categoryColor,
                 false
         );
 
         // Progress bar bounds
-        int barX = this.width / 2 - 102;
-        int barY = 42;
-        int barWidth = 204;
+        int barX = contentRenderStartX + (contentRenderWidth / 2) - (150 / 2); // Center within content area (barWidth is 204)
+        int barY = guiTop + 35;
+        int barWidth = 150;
         int barHeight = 10;
 
         // Progress bar background
@@ -1355,16 +1361,23 @@ public class ChronicleScreen extends Screen {
         graphics.renderItem(categoryIcon, barX - 20, barY - 3);
 
         // Scrollable content bounds
-        int contentAreaStartX = this.width / 2 - 102;
-        int contentAreaEndX = this.width / 2 + 102;
-        int contentAreaWidth = contentAreaEndX - contentAreaStartX;
-        int contentAreaStartY = 60;
-        int contentAreaEndY = this.height - 40;
-
-        // Enable scissor for scroll clipping
-        enableScissor(contentAreaStartX, contentAreaStartY, contentAreaEndX, contentAreaEndY);
-
+        int contentAreaStartX = contentRenderStartX;
+        int contentAreaEndX = contentRenderEndX;
+        int contentAreaWidth = contentRenderWidth; // Correctly calculated width
+        int contentAreaStartY = guiTop + 55; // Adjust start Y to be below progress bar
+        int contentAreaEndY = guiTop + ySize - 10; // Bottom of the GUI panel with padding
+        // FIX: Calculate contentAreaHeight
+        int contentAreaHeight = contentAreaEndY - contentAreaStartY; // The actual height of the scrollable area
         int currentRenderY = contentAreaStartY - (auraCategoryScrollOffset * font.lineHeight);
+
+        graphics.fill(contentAreaStartX, contentAreaStartY - 1, contentAreaEndX, contentAreaStartY, 0xFFFF0000); // Red line will still render correctly as fill handles GUI coords
+
+        // FIX: Corrected enableScissor parameters to account for OpenGL's bottom-left origin
+        // X is contentAreaStartX
+        // Y is (total window height - contentAreaEndY) -- this flips the Y origin
+        // Width is contentAreaWidth
+        // Height is contentAreaHeight
+        enableScissor(contentAreaStartX, this.height - contentAreaEndY, contentAreaWidth, contentAreaHeight);
 
         // --- SECTION: Current Tier ---
         Component tierStatusComponent = Component.literal(categoryName + " Aura Status: Tier 51-100 (Awakened)"); // <--- CHANGE HERE
@@ -1414,9 +1427,22 @@ public class ChronicleScreen extends Screen {
         disableScissor();
 
         // --- Scrollbar Rendering (Optional) ---
-        int contentHeight = calculateAuraCategoryContentHeight();
-        if (contentHeight > (contentAreaEndY - contentAreaStartY)) {
+        // Ensure calculateAuraCategoryContentHeight matches the width used here for wrapping
+        // You might need to update calculateAuraCategoryContentHeight to accept contentAreaWidth - 10
+        int contentHeight = calculateAuraCategoryContentHeight(); // Assuming this is now correctly implemented elsewhere
+        if (contentHeight > (contentAreaHeight)) { // Use contentAreaHeight here
             renderScrollbar(graphics, contentAreaEndX + 2, contentAreaStartY, contentAreaEndY, contentHeight);
+        }
+
+        // Update scroll button visibility and active state here
+        if (auraCategoryScrollUpButton != null) {
+            auraCategoryScrollUpButton.active = auraCategoryScrollOffset > 0;
+            auraCategoryScrollUpButton.visible = contentHeight > contentAreaHeight;
+        }
+        if (auraCategoryScrollDownButton != null) {
+            int maxAuraScrollOffset = Math.max(0, (contentHeight - contentAreaHeight) / font.lineHeight);
+            auraCategoryScrollDownButton.active = auraCategoryScrollOffset < maxAuraScrollOffset;
+            auraCategoryScrollDownButton.visible = contentHeight > contentAreaHeight;
         }
     }
 // Inside ChronicleScreen.java

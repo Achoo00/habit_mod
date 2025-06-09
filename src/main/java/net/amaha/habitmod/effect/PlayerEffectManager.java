@@ -31,7 +31,13 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.Objects;
 import java.util.Random;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Manages the application of effects to players based on their aura tier.
@@ -58,11 +64,6 @@ public class PlayerEffectManager {
     private static final int FIRE_RESISTANCE_AMPLIFIER = 0; // Fire Resistance I
     private static final int RESISTANCE_AMPLIFIER = 0; // Resistance I
 
-    // Health Aura max health modifiers
-    private static final double MAX_HEALTH_TIER_2 = 24.0D; // +2 hearts (4 health points)
-    private static final double MAX_HEALTH_TIER_3 = 28.0D; // +4 hearts (8 health points)
-    private static final double MAX_HEALTH_TIER_4 = 32.0D; // +6 hearts (12 health points)
-
     // Random number generator for chance-based effects
     private static final Random random = new Random();
 
@@ -77,6 +78,60 @@ public class PlayerEffectManager {
 
     // Track the previous health aura tier to detect tier changes
     private static int previousHealthTier = -1;
+
+    // Map to store effects per health aura tier
+    private static final Map<Integer, List<MobEffectInstance>> HEALTH_AURA_TIER_EFFECTS;
+    // List of all unique MobEffect types managed by this system, for efficient removal
+    private static final List<net.minecraft.world.effect.MobEffect> ALL_MANAGED_HEALTH_AURA_EFFECTS;
+
+    // Static initializer block to populate the maps once when the class is loaded
+    static {
+        Map<Integer, List<MobEffectInstance>> effectsMap = new HashMap<>();
+
+        // Tier 0 effects (Incapable Builder Debuffs)
+        effectsMap.put(0, Arrays.asList(
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, EFFECT_DURATION, SLOWNESS_AMPLIFIER, false, false),
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, EFFECT_DURATION, WEAKNESS_AMPLIFIER, false, false),
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.HUNGER, EFFECT_DURATION, HUNGER_AMPLIFIER, false, false),
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN, EFFECT_DURATION, MINING_FATIGUE_AMPLIFIER, false, false)
+        ));
+
+        // Tier 1 effects (No specific mob effects, primarily removal of Tier 0 debuffs)
+        effectsMap.put(1, Collections.emptyList());
+
+        // Tier 2 effects
+        effectsMap.put(2, Arrays.asList(
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, EFFECT_DURATION, REGENERATION_AMPLIFIER_TIER_2, false, false),
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, EFFECT_DURATION, FIRE_RESISTANCE_AMPLIFIER, false, false)
+        ));
+
+        // Tier 3 effects
+        effectsMap.put(3, Arrays.asList(
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SPEED, EFFECT_DURATION, HASTE_AMPLIFIER, false, false), // Haste
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, EFFECT_DURATION, REGENERATION_AMPLIFIER_TIER_2, false, false), // Regen I
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, EFFECT_DURATION, FIRE_RESISTANCE_AMPLIFIER, false, false)
+        ));
+
+        // Tier 4 effects
+        effectsMap.put(4, Arrays.asList(
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, EFFECT_DURATION, REGENERATION_AMPLIFIER_TIER_4, false, false), // Regen II
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.DIG_SPEED, EFFECT_DURATION, HASTE_AMPLIFIER, false, false), // Haste
+                new MobEffectInstance(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, EFFECT_DURATION, FIRE_RESISTANCE_AMPLIFIER, false, false)
+        ));
+
+        HEALTH_AURA_TIER_EFFECTS = Collections.unmodifiableMap(effectsMap); // Make the map immutable
+
+        // List all unique MobEffect types that this system manages
+        ALL_MANAGED_HEALTH_AURA_EFFECTS = Arrays.asList(
+                net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN,
+                net.minecraft.world.effect.MobEffects.WEAKNESS,
+                net.minecraft.world.effect.MobEffects.HUNGER,
+                net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN,
+                net.minecraft.world.effect.MobEffects.REGENERATION,
+                net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE,
+                net.minecraft.world.effect.MobEffects.DIG_SPEED
+        );
+    }
 
     /**
      * Handles player tick events to apply tier effects periodically.
@@ -114,89 +169,38 @@ public class PlayerEffectManager {
      * @param player The player to apply effects to.
      */
     private static void applyTierEffects(Player player) {
-        // Get current tier
-        int currentTier = AuraManager.getCurrentTier();
+        int currentTier = AuraManager.getCurrentTier(); // This will return 0, 1, 2, 3, 4 based on aura level
 
         // Check for tier changes to update health
         if (previousTier != currentTier) {
-            // Update max health based on current tier
-            if (currentTier == 0) {
-                // Set max health to half (10 hearts -> 5 hearts)
-                player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
-                      .setBaseValue(10.0D); // 10 = 5 hearts (half of normal 20 = 10 hearts)
-                player.setHealth(Math.min(player.getHealth(), 10.0F)); // Ensure health doesn't exceed new max
-            } else {
-                // Restore normal max health when moving to Tier 1 or higher
-                player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
-                      .setBaseValue(20.0D); // 20 = 10 hearts (normal)
+            double newMaxHealth = switch (currentTier) {
+                case 0 -> 10.0D; // 5 hearts (Tier 0 effects are applied later)
+                case 1 -> 14.0D; // 7 hearts
+                case 2 -> 20.0D; // 10 hearts (normal)
+                case 3 -> 30.0D; // 15 hearts
+                case 4 -> 40.0D; // 20 hearts
+                default ->
+                    // Handle unexpected tier, default to normal health
+                        20.0D;
+            }; // Default to normal health (10 hearts)
 
-                // If coming from Tier 0, heal the player to full health
-                if (previousTier == 0) {
-                    player.setHealth(player.getMaxHealth()); // Set to full health
-                    player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Your vitality has been restored!"));
-                }
+            // Apply the new max health
+            Objects.requireNonNull(player.getAttribute(Attributes.MAX_HEALTH))
+                    .setBaseValue(newMaxHealth);
+
+            // Ensure current health doesn't exceed new max, and heal if max health increased
+            // If max health increased, set health to new max. If decreased, cap it.
+            if (newMaxHealth > player.getMaxHealth()) {
+                player.setHealth((float) newMaxHealth); // Heal to new max
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Your vitality has increased!"));
+            } else if (newMaxHealth < player.getMaxHealth()) {
+                player.setHealth(Math.min(player.getHealth(), (float) newMaxHealth)); // Cap current health to new max
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Your vitality has decreased!"));
             }
 
             // Update previous tier
             previousTier = currentTier;
         }
-
-        // Check if player is in Tier 0 (Incapable Builder)
-        if (currentTier == 0) {
-            // Apply Tier 0 effects
-
-            // 10% slower movement (Slowness I)
-            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                    MobEffects.MOVEMENT_SLOWDOWN, 
-                    EFFECT_DURATION, 
-                    SLOWNESS_AMPLIFIER, 
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Weakness effect
-            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                    MobEffects.WEAKNESS,
-                    EFFECT_DURATION,
-                    WEAKNESS_AMPLIFIER,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Hunger effect
-            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                    MobEffects.HUNGER,
-                    EFFECT_DURATION,
-                    HUNGER_AMPLIFIER,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Mining Fatigue effect - makes mining much slower
-            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                    MobEffects.DIG_SLOWDOWN,
-                    EFFECT_DURATION,
-                    MINING_FATIGUE_AMPLIFIER,
-                    false, // ambient
-                    false  // show particles
-            ));
-        } else {
-            // If player is not in Tier 0, remove the effects if they have them
-            if (player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
-                player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
-            }
-            if (player.hasEffect(MobEffects.WEAKNESS)) {
-                player.removeEffect(MobEffects.WEAKNESS);
-            }
-            if (player.hasEffect(MobEffects.HUNGER)) {
-                player.removeEffect(MobEffects.HUNGER);
-            }
-            if (player.hasEffect(MobEffects.DIG_SLOWDOWN)) {
-                player.removeEffect(MobEffects.DIG_SLOWDOWN);
-            }
-        }
-
-        // Apply Health Aura effects
         applyHealthAuraEffects(player);
     }
 
@@ -205,177 +209,29 @@ public class PlayerEffectManager {
      * @param player The player to apply effects to.
      */
     private static void applyHealthAuraEffects(Player player) {
-        // Get current Health Aura tier
         int currentHealthTier = AuraManager.getHealthAuraTier();
 
-        // Check for tier changes to update health
+        System.out.println("Current Health Aura Tier: " + currentHealthTier);
+
+        // Only apply/remove effects if the tier has actually changed
         if (previousHealthTier != currentHealthTier) {
-            // Update max health based on current Health Aura tier
-            if (currentHealthTier == 0) {
-                // No additional health in Tier 0
-                // Max health is already set in applyTierEffects based on overall tier
-            } else if (currentHealthTier == 1) {
-                // No additional health in Tier 1
-                // Max health is already set in applyTierEffects based on overall tier
-            } else if (currentHealthTier == 2) {
-                // +2 hearts in Tier 2
-                player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_2);
-                player.sendSystemMessage(Component.literal("Your health has increased to " + (int)(MAX_HEALTH_TIER_2/2) + " hearts!"));
-            } else if (currentHealthTier == 3) {
-                // +4 hearts in Tier 3
-                player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_3);
-                player.sendSystemMessage(Component.literal("Your health has increased to " + (int)(MAX_HEALTH_TIER_3/2) + " hearts!"));
-            } else if (currentHealthTier == 4) {
-                // +6 hearts in Tier 4
-                player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_4);
-                player.sendSystemMessage(Component.literal("Your health has increased to " + (int)(MAX_HEALTH_TIER_4/2) + " hearts!"));
+
+            // 1. Remove all previously applied effects that this system manages
+            for (net.minecraft.world.effect.MobEffect effectType : ALL_MANAGED_HEALTH_AURA_EFFECTS) {
+                if (player.hasEffect(effectType)) {
+                    player.removeEffect(effectType);
+                }
             }
 
-            // Update previous Health Aura tier
+            // 2. Apply effects for the new current tier
+            List<MobEffectInstance> effectsToApply = HEALTH_AURA_TIER_EFFECTS.getOrDefault(currentHealthTier, Collections.emptyList());
+            for (MobEffectInstance effect : effectsToApply) {
+                // Create a new instance to avoid modifying the shared static MobEffectInstance object
+                player.addEffect(new MobEffectInstance(effect.getEffect(), effect.getDuration(), effect.getAmplifier(), effect.isAmbient(), effect.isVisible()));
+            }
+
+            // 3. Update the previous tier for the next tick
             previousHealthTier = currentHealthTier;
-        }
-
-        // Apply effects based on Health Aura tier
-        if (currentHealthTier == 0) {
-            // Tier 0 (0-20): Weakness I, Slowness I, faster hunger drain, more fall damage, food hunger effects
-
-            // Weakness I and Slowness I are already applied in applyTierEffects if overall tier is 0
-            // If overall tier is not 0 but Health Aura tier is 0, apply these effects
-            if (!AuraManager.isInTier0()) {
-                // Weakness I
-                player.addEffect(new MobEffectInstance(
-                        MobEffects.WEAKNESS,
-                        EFFECT_DURATION,
-                        WEAKNESS_AMPLIFIER,
-                        false, // ambient
-                        false  // show particles
-                ));
-
-                // Slowness I
-                player.addEffect(new MobEffectInstance(
-                        MobEffects.MOVEMENT_SLOWDOWN,
-                        EFFECT_DURATION,
-                        SLOWNESS_AMPLIFIER,
-                        false, // ambient
-                        false  // show particles
-                ));
-
-                // Hunger effect for faster hunger drain
-                player.addEffect(new MobEffectInstance(
-                        MobEffects.HUNGER,
-                        EFFECT_DURATION,
-                        HUNGER_AMPLIFIER,
-                        false, // ambient
-                        false  // show particles
-                ));
-            }
-
-            // Fall damage and food hunger effects are handled in event handlers
-
-        } else if (currentHealthTier == 1) {
-            // Tier 1 (21-50): Remove debuffs, normal hunger rate, default fall damage, reduced food hunger chance
-
-            // Remove debuffs if they were applied by Health Aura tier 0
-            if (!AuraManager.isInTier0()) {
-                if (player.hasEffect(MobEffects.WEAKNESS)) {
-                    player.removeEffect(MobEffects.WEAKNESS);
-                }
-                if (player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
-                    player.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
-                }
-                if (player.hasEffect(MobEffects.HUNGER)) {
-                    player.removeEffect(MobEffects.HUNGER);
-                }
-            }
-
-            // Normal hunger rate, default fall damage, and reduced food hunger chance are handled in event handlers
-
-        } else if (currentHealthTier == 2) {
-            // Tier 2 (51-100): Regeneration I, +2 hearts, reduced fall damage, Fire Protection I, no hunger from food
-
-            // Regeneration I
-            player.addEffect(new MobEffectInstance(
-                    MobEffects.REGENERATION,
-                    EFFECT_DURATION,
-                    REGENERATION_AMPLIFIER_TIER_2,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Fire Protection I
-            player.addEffect(new MobEffectInstance(
-                    MobEffects.FIRE_RESISTANCE,
-                    EFFECT_DURATION,
-                    FIRE_RESISTANCE_AMPLIFIER,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Reduced fall damage and no hunger from food are handled in event handlers
-
-        } else if (currentHealthTier == 3) {
-            // Tier 3 (101-150): Haste I, +4 hearts, reduced environmental damage, Regeneration I, reduced fall damage, more saturation, poison immunity
-
-            // Haste I
-            player.addEffect(new MobEffectInstance(
-                    MobEffects.DIG_SPEED,
-                    EFFECT_DURATION,
-                    HASTE_AMPLIFIER,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Regeneration I
-            player.addEffect(new MobEffectInstance(
-                    MobEffects.REGENERATION,
-                    EFFECT_DURATION,
-                    REGENERATION_AMPLIFIER_TIER_2,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Fire Protection I
-            player.addEffect(new MobEffectInstance(
-                    MobEffects.FIRE_RESISTANCE,
-                    EFFECT_DURATION,
-                    FIRE_RESISTANCE_AMPLIFIER,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Reduced environmental damage, reduced fall damage, more saturation, and poison immunity are handled in event handlers
-
-        } else if (currentHealthTier == 4) {
-            // Tier 4 (151+): Regeneration II, +6 hearts, temporary Resistance I after damage, Haste I, reduced environmental damage, reduced fall damage, more saturation, immunity to Poison and Slowness
-
-            // Regeneration II
-            player.addEffect(new MobEffectInstance(
-                    MobEffects.REGENERATION,
-                    EFFECT_DURATION,
-                    REGENERATION_AMPLIFIER_TIER_4,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Haste I
-            player.addEffect(new MobEffectInstance(
-                    MobEffects.DIG_SPEED,
-                    EFFECT_DURATION,
-                    HASTE_AMPLIFIER,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Fire Protection I
-            player.addEffect(new MobEffectInstance(
-                    MobEffects.FIRE_RESISTANCE,
-                    EFFECT_DURATION,
-                    FIRE_RESISTANCE_AMPLIFIER,
-                    false, // ambient
-                    false  // show particles
-            ));
-
-            // Temporary Resistance I after damage, reduced environmental damage, reduced fall damage, more saturation, and immunity to Poison and Slowness are handled in event handlers
         }
     }
 
@@ -383,85 +239,37 @@ public class PlayerEffectManager {
      * Handles player login to apply initial tier effects.
      * @param event The player logged in event.
      */
-    @SubscribeEvent
+    // In your PlayerEffectManager class (or wherever these event handlers are)
+
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         Player player = event.getEntity();
 
-        // Apply initial tier effects when player logs in
         if (!player.level().isClientSide()) {
-            // Initialize the previous tier to the current tier
+            // Initialize previous overall tier to current tier
             previousTier = AuraManager.getCurrentTier();
-            previousHealthTier = AuraManager.getHealthAuraTier();
 
-            // Apply max health modification based on tier
-            if (AuraManager.isInTier0()) {
-                // Set max health to half (10 hearts -> 5 hearts)
-                player.setHealth(player.getHealth() / 2);
-                player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
-                      .setBaseValue(10.0D); // 10 = 5 hearts (half of normal 20 = 10 hearts)
-            } else {
-                // Apply max health based on Health Aura tier
-                int healthTier = AuraManager.getHealthAuraTier();
-                if (healthTier == 2) {
-                    // +2 hearts in Tier 2
-                    player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_2);
-                } else if (healthTier == 3) {
-                    // +4 hearts in Tier 3
-                    player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_3);
-                } else if (healthTier == 4) {
-                    // +6 hearts in Tier 4
-                    player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_4);
-                } else {
-                    // Restore normal max health
-                    player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
-                          .setBaseValue(20.0D); // 20 = 10 hearts (normal)
-                }
-            }
+            // IMPORTANT FIX: Force previousHealthTier to a different value to ensure
+            // applyHealthAuraEffects runs its effect application logic on first login.
+            // It will then correctly update previousHealthTier to the actual tier.
+            previousHealthTier = -1; // Any value outside of 0-4 range works
 
-            // Apply tier effects after setting health
+            // Apply tier effects (this will trigger applyHealthAuraEffects)
             applyTierEffects(player);
         }
     }
 
-    /**
-     * Handles player respawn to ensure tier effects are applied after respawning.
-     * @param event The player respawn event.
-     */
-    @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         Player player = event.getEntity();
 
-        // Apply tier effects when player respawns
         if (!player.level().isClientSide()) {
-            // Apply max health modification based on tier
-            if (AuraManager.isInTier0()) {
-                // Set max health to half (10 hearts -> 5 hearts)
-                player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
-                      .setBaseValue(10.0D); // 10 = 5 hearts (half of normal 20 = 10 hearts)
-                player.setHealth(Math.min(player.getHealth(), 10.0F)); // Ensure health doesn't exceed new max
-            } else {
-                // Apply max health based on Health Aura tier
-                int healthTier = AuraManager.getHealthAuraTier();
-                if (healthTier == 2) {
-                    // +2 hearts in Tier 2
-                    player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_2);
-                    player.setHealth(Math.min(player.getHealth(), (float)MAX_HEALTH_TIER_2)); // Ensure health doesn't exceed new max
-                } else if (healthTier == 3) {
-                    // +4 hearts in Tier 3
-                    player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_3);
-                    player.setHealth(Math.min(player.getHealth(), (float)MAX_HEALTH_TIER_3)); // Ensure health doesn't exceed new max
-                } else if (healthTier == 4) {
-                    // +6 hearts in Tier 4
-                    player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH_TIER_4);
-                    player.setHealth(Math.min(player.getHealth(), (float)MAX_HEALTH_TIER_4)); // Ensure health doesn't exceed new max
-                } else {
-                    // Restore normal max health
-                    player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
-                          .setBaseValue(20.0D); // 20 = 10 hearts (normal)
-                }
-            }
+            // Initialize previous overall tier to current tier
+            previousTier = AuraManager.getCurrentTier();
 
-            // Apply tier effects after setting health
+            // IMPORTANT FIX: Force previousHealthTier to a different value to ensure
+            // applyHealthAuraEffects runs its effect application logic on first respawn.
+            previousHealthTier = -1; // Any value outside of 0-4 range works
+
+            // Apply tier effects (this will trigger applyHealthAuraEffects)
             applyTierEffects(player);
         }
     }

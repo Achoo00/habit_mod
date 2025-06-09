@@ -39,28 +39,27 @@ In-game abilities and progression are directly tied to your Aura levels across d
 
 * **0-20 (Incapable)**:
     * XP Gain reduced by 25%.
-    * Max Health limited to 5 hearts.
+    * Max Health limited to 5 hearts. - done
     * Player cannot skip the night.
     * Player can still set spawn by clicking on the bed.
 * **21-50 (Struggling)**:
     * XP gain reduced by 10%.
-    * Max Health limited to 7 hearts.
+    * Max Health limited to 7 hearts. - done
     * Player can sleep in bed and skip the night.
 * **51-100 (Awakened)**:
     * Player can enter the Nether.
-    * Max Health is 10 hearts.
+    * Max Health is 10 hearts. - done
 * **101-150 (Proficient)**:
     * Player can enter the Nether.
-    * Max Health is 15 hearts.
+    * Max Health is 15 hearts. - done
 * **151+ (Luminary)**:
     * Player can enter the Nether and End.
-    * Max Health is 20 hearts.
+    * Max Health is 20 hearts. - done
 
 ### Health Aura (Physical Well-being)
 
 * **0-20 (Weakened)**:
-    * Permanent Weakness I, Slowness I.
-    * Hunger drains 10% faster.
+    * Permanent Weakness I, Mining Fatigue III, Slowness I, Hunger I - done
     * 25% more fall damage.
     * Food has a 50% chance to cause Hunger (Rotten Flesh/Raw Chicken 100% Hunger/Poison I).
 * **21-50 (Recovering)**:
@@ -82,7 +81,7 @@ In-game abilities and progression are directly tied to your Aura levels across d
     * Reduced fall damage (Feather Falling I equivalent).
     * Food provides 15% more saturation.
     * Immune to Poison effects.
-* **151+ (Resilient)**:
+* **151+ (Resilient)**:e
     * Permanent Regeneration II.
     * Max Health +6 hearts.
     * Temporary Resistance I after damage.
