@@ -167,6 +167,7 @@ public class PlayerEffectManager {
     /**
      * Applies effects based on the player's current aura tier.
      * @param player The player to apply effects to.
+     * Max Health Working
      */
     private static void applyTierEffects(Player player) {
         int currentTier = AuraManager.getCurrentTier(); // This will return 0, 1, 2, 3, 4 based on aura level
@@ -528,38 +529,56 @@ public class PlayerEffectManager {
      * @param event The living fall event.
      */
     @SubscribeEvent
-    public static void onFallDamage(LivingFallEvent event) {
-        // Only process for players
-        if (!(event.getEntity() instanceof Player player)) {
-            return;
-        }
+   public static void onFallDamage(LivingFallEvent event) {
+          // Only process for players
+    if (!(event.getEntity() instanceof Player player)) {
+        return;
+     }
 
-        // Only process on server side
-        if (player.level().isClientSide()) {
-            return;
-        }
+          // Only process on server side
+     if (player.level().isClientSide()) {
+     return;
+     }
 
-        // Get the Health Aura tier
-        int healthTier = AuraManager.getHealthAuraTier();
+          // --- DEBUGGING OUTPUT START ---
+     System.out.println("DEBUG: onFallDamage event triggered for player: " + player.getName().getString());
+     float originalDamageMultiplier = event.getDamageMultiplier();
+     System.out.println("DEBUG: Original Fall Damage Multiplier: " + originalDamageMultiplier);
+          // --- DEBUGGING OUTPUT END ---
 
-        // Apply effects based on Health Aura tier
-        if (healthTier == 0) {
-            // Tier 0 (0-20): Player shall take 25% more fall damage.
-            float newDamage = event.getDamageMultiplier() * 1.25f;
-            event.setDamageMultiplier(newDamage);
+          // Get the Health Aura tier
+     int healthTier = AuraManager.getHealthAuraTier();
 
-        } else if (healthTier == 1) {
-            // Tier 1 (21-50): Fall damage shall be set to default.
-            // No modification needed
+          // --- DEBUGGING OUTPUT START ---
+     System.out.println("DEBUG: Player's Health Aura Tier: " + healthTier);
+          // --- DEBUGGING OUTPUT END ---
 
-        } else if (healthTier >= 2) {
-            // Tier 2+ (51+): Player shall have reduced fall damage (equivalent to Feather Falling I).
-            // Feather Falling I reduces fall damage by 12%
-            float newDamage = event.getDamageMultiplier() * 0.88f;
-            event.setDamageMultiplier(newDamage);
-        }
-    }
+          // Apply effects based on Health Aura tier
+     if (healthTier == 0) {
+              // Tier 0 (0-20): Player shall take 25% more fall damage.
+     float newDamage = originalDamageMultiplier * 1.25f;
+     event.setDamageMultiplier(newDamage);
+              // --- DEBUGGING OUTPUT START ---
+     System.out.println("DEBUG: Applying Tier 0 effect: Fall damage increased by 25%. New Multiplier: " + newDamage);
+              // --- DEBUGGING OUTPUT END ---
 
+     } else if (healthTier == 1) {
+              // Tier 1 (21-50): Fall damage shall be set to default.
+              // No modification needed
+             // --- DEBUGGING OUTPUT START ---
+     System.out.println("DEBUG: Applying Tier 1 effect: Fall damage is default. Multiplier: " + originalDamageMultiplier);
+              // --- DEBUGGING OUTPUT END ---
+
+     } else if (healthTier >= 2) {
+              // Tier 2+ (51+): Player shall have reduced fall damage (equivalent to Feather Falling I).
+              // Feather Falling I reduces fall damage by 12%
+     float newDamage = originalDamageMultiplier * 0.88f;
+     event.setDamageMultiplier(newDamage);
+              // --- DEBUGGING OUTPUT START ---
+     System.out.println("DEBUG: Applying Tier 2+ effect: Fall damage reduced by 12%. New Multiplier: " + newDamage);
+              // --- DEBUGGING OUTPUT END ---
+     }
+     }
     /**
      * Handles damage to apply Health Aura effects.
      * @param event The living hurt event.

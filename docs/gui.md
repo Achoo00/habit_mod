@@ -23,7 +23,7 @@ The "Chronicle of Deeds" is the central hub for players to manage their real-lif
 The GUI will feature a main content area with a left-side navigation panel for different sections/aura categories.
 
 +-------------------------------------------------------------------+
-| [MOD LOGO/TITLE]                                 [Confess Cheat] |
+| [MOD LOGO/TITLE]                                                  |
 +-------------------------------------------------------------------+
 | Productivity Aura: [█████████----] 125/151+                       |
 +-------------------------------------------------------------------+
@@ -37,7 +37,7 @@ The GUI will feature a main content area with a left-side navigation panel for d
 |                  +-------------------------------------------+    |
 |                  |                                           |    |
 |                  +-------------------------------------------+    |
-|                                         [ Add New Task ]          |
+| [Confess Cheat]                         [ Add New Task ]          |
 +-------------------------------------------------------------------+
 
 #### 2.2.1. Top Header Area
@@ -94,29 +94,29 @@ This panel allows players to switch between different views of their Aura system
 When a player clicks on one of the individual Aura category tabs (e.g., "Health"), the central content area updates to show detailed information for that specific Aura.
 
 +-------------------------------------------------------------------+
-| [MOD LOGO/TITLE]                                 [Confess Cheat] |
+| [MOD LOGO/TITLE]                                                  |
 +-------------------------------------------------------------------+
-| Health Aura: [███████----] 75                                    |
+| Health Aura: [███████----] 75                                     |
 +-------------------------------------------------------------------+
-| [  Health ] <--- ACTIVE                                          |
+| [  Health ] <--- ACTIVE                                           |
 | [  Intell ]      ** Health Aura Status: Tier 51-100 (Awakened) ** |
 | [  Social ]      -----------------------------------------------  |
-| [  Org&Prod]     ** Benefits: ** |
+| [  Org&Prod]     ** Benefits: **                                  |
 | [  Creative]     | [♥] Permanent Regeneration I                   |
-| [  Skill Trees]  | [❤︎❤︎] +2 Max Health                             |
-| [ Settings ]     | [🪶] Reduced Fall Damage (Feather Falling I)    |
-|                  | [🔥] Permanent Fire Protection I                |
-|                  | [🍔] Food 0% Hunger Chance                      |
+| [  Skill Trees]  | [❤︎❤︎] +2 Max Health                            |
+| [ Settings ]     | [🪶] Reduced Fall Damage (Feather Falling I)   |
+|                  | [🔥] Permanent Fire Protection I               |
+|                  | [🍔] Food 0% Hunger Chance                     |
 |                  -----------------------------------------------  |
-|                  ** Next Unlock at 101 Health Aura: ** |
+|                  ** Next Unlock at 101 Health Aura: **            |
 |                  | [⚡] Permanent Haste I                          |
-|                  | [❤︎❤︎❤︎❤︎] +4 Max Health                          |
-|                  | [💧] Significantly Reduced Environmental Damage |
+|                  | [❤︎❤︎❤︎❤︎] +4 Max Health                         |
+|                  | [💧] Significantly Reduced Environmental Damage|
 |                  -----------------------------------------------  |
-|                  **Associated Tasks:** |
-|                  | Task: Workout          [M] [███--] [Done]       |
-|                  | Task: Floss            [S] [████-] [Done]       |
-|                  | ...                                             |
+|                  **Associated Tasks:**                            |
+|                  | Task: Workout          [M] [███--] [Done]      |
+|                  | Task: Floss            [S] [████-] [Done]      |
+|                  | ...                                            |
 +-------------------------------------------------------------------+
 
 #### 2.3.1. Top Header Area (Individual Aura)
